@@ -1,11 +1,17 @@
-import { StyleSheet, Text, View } from 'react-native';
-
+import { Button, StyleSheet, Text, View } from 'react-native';
 import * as ExpoFelicaReader from 'expo-felica-reader';
+import { useState } from 'react';
 
 export default function App() {
+  const [idm, setIdm] = useState<string>();
+  const onPress = async () => {
+    const resulit = await ExpoFelicaReader.scan();
+    setIdm(resulit);
+  }
   return (
     <View style={styles.container}>
-      <Text>{ExpoFelicaReader.hello()}</Text>
+      <Button title='Scan' onPress={onPress}/>
+      <Text style={{ padding: 12 }}>IDm: {idm ?? '-'}</Text>
     </View>
   );
 }

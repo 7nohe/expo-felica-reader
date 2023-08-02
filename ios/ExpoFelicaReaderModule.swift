@@ -1,44 +1,70 @@
 import ExpoModulesCore
+import CoreNFC
 
 public class ExpoFelicaReaderModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+  var session: NfcSession?
+  var semaphore: DispatchSemaphore?
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoFelicaReader')` in JavaScript.
     Name("ExpoFelicaReader")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
-
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+    AsyncFunction("scan") { (promise: Promise) in
+        session?.startSession()
+        DispatchQueue.global(qos: .background).async {
+            self.semaphore?.wait()
+            promise.resolve(self.session?.message)
+        }
     }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoFelicaReaderView.self) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { (view: ExpoFelicaReaderView, prop: String) in
-        print(prop)
-      }
+      
+    OnCreate {
+        semaphore = DispatchSemaphore(value: 0)
+        session = NfcSession(semaphore: semaphore!)
     }
   }
+}
+
+class NfcSession: NSObject, NFCTagReaderSessionDelegate {
+    var session: NFCTagReaderSession?
+    let semaphore: DispatchSemaphore
+    var message: String?
+
+    init (semaphore: DispatchSemaphore) {
+        self.semaphore = semaphore
+    }
+    
+    func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
+        print("tagReaderSessionDidBecomeActive")
+    }
+    
+    func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+        print("Error: \(error.localizedDescription)")
+        self.semaphore.signal()
+        self.session = nil
+    }
+    
+    func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+        let tag = tags.first!
+        session.connect(to: tag) { error in
+            if nil != error {
+                session.invalidate(errorMessage: "Error!")
+                self.semaphore.signal()
+                return
+            }
+            guard case .feliCa(let feliCaTag) = tag else {
+                session.invalidate(errorMessage: "This is not FeliCa!")
+                self.semaphore.signal()
+                return
+            }
+            let idm = feliCaTag.currentIDm.map { String(format: "%.2hhx", $0) }.joined()
+            self.message = idm
+            session.alertMessage = "Success!"
+            session.invalidate()
+            self.semaphore.signal()
+        }
+    }
+    
+    func startSession() {
+        self.session = NFCTagReaderSession(pollingOption: [.iso14443, .iso15693, .iso18092], delegate: self, queue: nil)
+        session?.alertMessage = "Touch your FeliCa!"
+        session?.begin()
+    }
 }

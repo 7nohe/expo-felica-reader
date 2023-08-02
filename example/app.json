@@ -16,14 +16,29 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.felicareader.example"
+      "bundleIdentifier": "expo.modules.felicareader.example",
+      "infoPlist": {
+        "NFCReaderUsageDescription": "To read FeliCa card",
+        "com.apple.developer.nfc.readersession.felica.systemcodes": [
+          "0003",
+          "FE00"
+        ]
+      },
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": [
+          "TAG"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "expo.modules.felicareader.example"
+      "package": "expo.modules.felicareader.example",
+      "permissions": [
+        "NFC"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
