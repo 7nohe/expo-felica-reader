@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-felica-reader": ["../src/index"],
+      "expo-felica-reader/*": ["../src/*"]
+    }
+  }
+}
