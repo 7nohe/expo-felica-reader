@@ -5,7 +5,7 @@ Expo FeliCa Reader module
 ## Installation
 
 ```bash
-npm install expo-felica-reader
+npx expo install expo-felica-reader
 ```
 
 ## Project configuration
